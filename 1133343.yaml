@@ -1,94 +1,159 @@
-version: '3.3'
+version: "3.2"
 services:
-    openvpn-client:
-        image: dperson/openvpn-client
-        container_name: openvpn-client
-        network_mode: bridge
-        privileged: true
-        environment:
-            - TZ=Europe/Moscow
-            - Firewall=true
-            - DNS=192.168.104.1
-        ports:
-            - '9117:9117/tcp'
-        volumes:
-            - '/home/khabarovru/1/config/openvpn-client:/vpn:rw,slave'
-        devices:
-            - /dev/net/tun
-        restart: unless-stopped
+  db:
+    image: mariadb
+    container_name: mariadb
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    volumes:
+      - /home/khabarovru/1/config/db:/var/lib/mysql
+    environment:
+      - TZ=Europe/Moscow
+      - PUID=1000
+      - PGID=1000
+      - UMASK=000
+      - MYSQL_ROOT_PASSWORD=13spartahN
+      - MYSQL_PASSWORD=13spartahN
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
 
-    jackett:
-        image: 'linuxserver/jackett:development'
-        container_name: jackett
-        network_mode: 'container:openvpn-client'
-        environment:
-            - TZ=Europe/Moscow
-            - PUID=1000
-            - PGID=100
-        volumes:
-            - '/home/khabarovru/1/torrents:/downloads:rw,slave'
-            - '/home/khabarovru/1/config/jackett:/config:rw,slave'
-        restart: unless-stopped
-
-    sonarr:
-        image: lscr.io/linuxserver/sonarr:latest
-        container_name: sonarr
-        environment:
-        - PUID=1000
-        - PGID=1000
-        - TZ=Europe/Moscow
-        volumes:
-        - '/home/khabarovru/1/config/sonarr:/config'
-        - '/home/khabarovru/1/media/tv:/tv'
-        - '/home/khabarovru/1/torrents/tv:/downloads'
-        ports:
-        - 8989:8989
-        restart: unless-stopped
-
-    radarr:
-        image: lscr.io/linuxserver/radarr:latest
-        container_name: radarr
-        environment:
-        - PUID=1000
-        - PGID=1000
-        - TZ=Europe/Moscow
-        volumes:
-        - '/home/khabarovru/1/config/radarr:/config'
-        - '/home/khabarovru/1/media/movies:/movies'
-        - '/home/khabarovru/1/torrents/movies:/downloads'
-        ports:
-        - 7878:7878
-        restart: unless-stopped
-
-    qbittorrent:
-        image: lscr.io/linuxserver/qbittorrent:latest
-        container_name: qbittorrent
-        environment:
-        - PUID=1000
-        - PGID=1000
-        - TZ=Europe/Moscow
-        - WEBUI_PORT=8080
-        volumes:
-        - '/home/khabarovru/1/config/qbittorrent:/config'
-        - '/home/khabarovru/1/torrents:/downloads'
-        ports:
-        - 8080:8080
-        - 6881:6881
-        - 6881:6881/udp
-        restart: unless-stopped
-
-    plex:
-        image: lscr.io/linuxserver/plex:latest
-        container_name: plex
-        network_mode: host
-        environment:
-        - PUID=1000
-        - PGID=1000
-        - VERSION=docker
-        - PLEX_CLAIM= #optional
-        - TZ=Europe/Moscow
-        volumes:
-        - '/home/khabarovru/1/config/plex:/config'
-        - '/home/khabarovru/1/media/tv:/tv'
-        - '/home/khabarovru/1/media/movies:/movies'
-        restart: unless-stopped
+  app:
+    image: nextcloud
+    container_name: nextcloud
+    restart: unless-stopped
+    ports:
+      - 8099:80
+    links:
+      - db
+    volumes:
+      - /home/khabarovru/1/config/nextcloud:/var/www/html
+    environment:
+      - TZ=Europe/Moscow
+      - PUID=1000
+      - PGID=1000
+      - UMASK=000
+      - MYSQL_PASSWORD=13spartahN
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=db
+  homer:
+    image: b4bz/homer:latest
+    container_name: homer
+    hostname: homer
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Moscow
+      - PUID=1000
+      - PGID=1000
+      - UMASK=000
+    volumes:
+      - /home/khabarovru/1/config/homer/assets/:/www/assets
+    ports:
+      - 80:8080
+  instantprivacy:
+    container_name: instantprivacy
+    ports:
+      - 8118:8118
+    environment:
+      - user=root
+    image: linuxconfig/instantprivacy
+  openvpn-client:
+    image: dperson/openvpn-client
+    container_name: openvpn-client
+    network_mode: bridge
+    privileged: true
+    environment:
+      - TZ=Europe/Moscow
+      - Firewall=true
+      - DNS=192.168.104.1
+    ports:
+      - 9117:9117/tcp
+    volumes:
+      - /home/khabarovru/1/config/openvpn-client:/vpn:rw,slave
+    devices:
+      - /dev/net/tun
+    restart: unless-stopped
+  jackett:
+    image: linuxserver/jackett:development
+    container_name: jackett
+    network_mode: container:openvpn-client
+    environment:
+      - TZ=Europe/Moscow
+      - PUID=1000
+      - PGID=1000
+      - UMASK=000
+    volumes:
+      - /home/khabarovru/1/torrents:/downloads:rw,slave
+      - /home/khabarovru/1/config/jackett:/config:rw,slave
+    restart: unless-stopped
+  radarr:
+    container_name: radarr
+    image: cr.hotio.dev/hotio/radarr:latest
+    restart: unless-stopped
+    logging:
+      driver: json-file
+    network_mode: bridge
+    ports:
+      - 7878:7878
+    environment:
+      - TZ=Europe/Moscow
+      - PUID=1000
+      - PGID=1000
+      - UMASK=000
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /home/khabarovru/1/config/radarr:/config
+      - /home/khabarovru/1:/data
+  sonarr:
+    container_name: sonarr
+    image: cr.hotio.dev/hotio/sonarr:latest
+    restart: unless-stopped
+    logging:
+      driver: json-file
+    network_mode: bridge
+    ports:
+      - 8989:8989
+    environment:
+      - TZ=Europe/Moscow
+      - PUID=1000
+      - PGID=1000
+      - UMASK=000
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /home/khabarovru/1/config/sonarr:/config
+      - /home/khabarovru/1:/data
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - TZ=Europe/Moscow
+      - WEBUI_PORT=8080
+      - PUID=1000
+      - PGID=1000
+      - UMASK=000
+    volumes:
+      - /home/khabarovru/1/config/qbittorrent:/config
+      - /home/khabarovru/1/torrents:/downloads
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    network_mode: bridge
+    environment:
+      - VERSION=docker
+      - PLEX_CLAIM=claim-s7NbbDwA1buAXnDvQfrZ #optional
+      - TZ=Europe/Moscow
+      - PUID=1000
+      - PGID=1000
+      - UMASK=000
+    volumes:
+      - /home/khabarovru/1/config/plex:/config
+      - /home/khabarovru/1:/tv
+      - /home/khabarovru/1:/movies
+    ports:
+      - 32400:32400
+    restart: unless-stopped
