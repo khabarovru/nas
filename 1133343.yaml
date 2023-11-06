@@ -12,8 +12,8 @@ services:
       - PUID=1000
       - PGID=1000
       - UMASK=000
-      - MYSQL_ROOT_PASSWORD=13spartahN
-      - MYSQL_PASSWORD=13spartahN
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_PASSWORD=password
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
 
@@ -32,7 +32,7 @@ services:
       - PUID=1000
       - PGID=1000
       - UMASK=000
-      - MYSQL_PASSWORD=13spartahN
+      - MYSQL_PASSWORD=password
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
       - MYSQL_HOST=db
